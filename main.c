@@ -22,106 +22,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 
-// set according to your system and compile
-#define PASSWORD "something"
-#define UNAME "Rouvik Maji"
+#include "helper.h"
+#include "handleLock.h"
 
-#define PASSWD_BUFFER_SIZE 16
-#define CLRSCR "\033[H\033[2J"
-#define ANSI_RED "\e[0;31m"
-#define ANSI_WHITE "\e[0;37m"
-#define ANSI_GREEN "\e[0;32m"
-
-/**
- * @brief Takes in a termios struct to store the old termios settings and then set the termios settings to hide passwd and disable signals
- *
- * @param old struct termios * used to store the old terminal settings
- * @return true If the password settings is set correctly
- * @return false If the password settings could not be set
- */
-static inline bool disableEcho(struct termios *old)
+int main(int argc, const char *argv[])
 {
-    if (tcgetattr(STDIN_FILENO, old) == -1)
+    if (argc > 1)
     {
-        perror("[ERROR / WARNING] Failed to get termios structure, password echo is enabled");
-        return false;
-    }
-
-    struct termios new = *old;
-    new.c_lflag &= ~(ECHO | ICANON | ISIG); // disable terminal echoing (hide passwd, canonical to get raw IO and signals to make life easier for me to disable signals)
-
-    if (tcsetattr(STDIN_FILENO, TCSANOW, &new) == -1)
-    {
-        perror("[ERROR / WARNING] Failed to set termios structure, password echo is enabled");
-        return false;
-    }
-
-    return true;
-}
-
-int main()
-{
-    char passwdBuf[PASSWD_BUFFER_SIZE];
-    struct termios old;
-    bool echoSet = true; // to keep track if echoing has been disabled
-
-    echoSet = disableEcho(&old); // if false then warning, password will be visible :0
-
-    int previousAttempts = 0;
-    while (true)
-    {
-        printf("This shell has been soft locked by SLock v1.0 - https://github.com/Rouvik/SoftLocker\n"
-               "Please use the correct SLock password to unlock or contact " UNAME " if you are not him/her\n\n"
-               "Previous attempts: %d\nEnter password: ", previousAttempts); // print last password attempts here and ask for new passwd
-        fflush(stdout);                                                      // flush is used to make sure the lines are printed UwU
-
-        int i = 0;
-        char ch = 0;
-        while (read(STDIN_FILENO, &ch, 1) > 0 && ch != '\n' && i < sizeof(passwdBuf) - 1)   // read the passwd chars one by one and print * instead
+        if (!strcmp(argv[1], "chpasswd"))
         {
-            if ((ch == 0x7f || ch == 0x08) && i > 0) // for backspace
-            {
-                i--;
-                write(STDOUT_FILENO, "\b \b", 3);
-                continue;
-            }
-
-            passwdBuf[i++] = ch;
-            write(STDOUT_FILENO, "*", 1);
+            puts("Password changing, encryption coming soon!!!\nFor now you need to recompile the project to change passwords, edit " ANSI_GREEN "ENV.h" ANSI_WHITE " and recompile to reset new password\n");
         }
-        passwdBuf[i] = 0;
-
-        // make sure no \n exists in final passwd
-        char *newLine = strrchr(passwdBuf, '\n');
-        if (newLine)
+        else if (!strcmp(argv[1], "help"))
         {
-            *newLine = 0;
-        }
-
-        // passwd check (hope no one does a LDPRELOAD hack to swap out strcmp (thats way out of scope for this program tho))
-        if (!strcmp(passwdBuf, PASSWORD))
-        {
-            puts(ANSI_GREEN "\nWelcome back " UNAME "!" ANSI_WHITE);
-            break;
+            printf("SLock " VERSION_STR " - " REPO_LINK "\n"
+                   "Syntax: %s\t\tSoft Locks the shell\n"
+                   "Syntax: %s help\t\tBrings you here\n"
+                   "Syntax: %s chpasswd\t\tUnimplemented\n\n",
+                   argv[0], argv[0], argv[0]);
         }
         else
         {
-            fputs(CLRSCR ANSI_RED "[ERROR] Bad attempt, please try again\n" ANSI_WHITE, stderr);
-            previousAttempts++;
+            puts(ANSI_RED "[WARNING] Unknown subcommand" ANSI_WHITE "\n");
         }
     }
 
-    // reset terminal back to normal (if this fails we might be stuck in a broken state)
-    if (echoSet)
-    {
-        tcsetattr(STDIN_FILENO, TCSANOW, &old);
-    }
-
-    return 0;
+    return handleLock();
 }
