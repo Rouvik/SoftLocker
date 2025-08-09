@@ -76,7 +76,9 @@ int main()
     int previousAttempts = 0;
     while (true)
     {
-        printf("Previous attempts: %d\nEnter password: ", previousAttempts); // print last password attempts here and ask for new passwd
+        printf("This shell has been soft locked by SLock v1.0 - https://github.com/Rouvik/SoftLocker\n"
+               "Please use the correct SLock password to unlock or contact " UNAME " if you are not him/her\n\n"
+               "Previous attempts: %d\nEnter password: ", previousAttempts); // print last password attempts here and ask for new passwd
         fflush(stdout);                                                      // flush is used to make sure the lines are printed UwU
 
         int i = 0;
